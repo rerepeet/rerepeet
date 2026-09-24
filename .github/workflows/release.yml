@@ -60,7 +60,10 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [mac-arm, mac-intel, windows, linux]
+    # The Apple-silicon package is the primary macOS download. Keep the
+    # Intel build independent so a saturated macOS-13 queue cannot delay a
+    # Windows/Linux release.
+    needs: [mac-arm, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
