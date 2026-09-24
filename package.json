@@ -1,7 +1,8 @@
 {
-  "name": "signal-room",
-  "version": "0.1.0",
-  "description": "A local-first, consented-conversation copilot powered by a user's Gemini API key.",
+  "name": "rerepeet",
+  "version": "0.2.0",
+  "description": "A local-first, consented audio workspace with bring-your-own AI providers.",
+  "author": "Rerepeet contributors",
   "main": "electron/main.cjs",
   "private": true,
   "scripts": {
@@ -15,6 +16,6 @@
     "package:linux": "npm run build:web && electron-builder --linux AppImage --x64 --publish never",
     "test": "node --test test/*.test.cjs"
   },
-  "build": { "appId": "com.signalroom.app", "productName": "Signal Room", "directories": {"output": "release"}, "artifactName": "${productName}-${version}-${os}-${arch}.${ext}", "files": ["dist/**/*", "electron/**/*", "package.json"], "mac": {"target": ["dmg"]}, "win": {"target": ["nsis"]}, "linux": {"target": ["AppImage"]} },
+  "build": { "appId": "cc.rerepeet.app", "productName": "Rerepeet", "directories": {"output": "release"}, "artifactName": "Rerepeet-${os}-${arch}.${ext}", "files": ["dist/**/*", "electron/**/*", "package.json"], "mac": {"target": ["dmg"], "icon": "build/icon.icns"}, "win": {"target": ["nsis"], "icon": "build/icon.ico"}, "linux": {"target": ["AppImage"], "icon": "build/icon.png"} },
   "devDependencies": { "concurrently": "latest", "electron": "latest", "electron-builder": "latest", "vite": "latest", "wait-on": "latest" }
 }

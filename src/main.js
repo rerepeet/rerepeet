@@ -1,24 +1,292 @@
 import './style.css';
-import byte from './assets/byte-mascot.png';
-const app=document.querySelector('#app');const storeKey='signal-room-sessions-v1';
-const state={apiKey:'',model:'gemini-2.0-flash',deviceId:'default',rememberKey:true,sessionName:'Untitled session',context:'',transcript:[],suggestions:[],sessions:JSON.parse(localStorage.getItem(storeKey)||'[]'),recording:false,processing:false,chunkTimer:null,recorder:null,stream:null,devices:[],setupOpen:false,setupComplete:false,meter:0,meterStream:null,meterFrame:null,testAudioUrl:null};
-const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));const now=()=>new Intl.DateTimeFormat([],{hour:'2-digit',minute:'2-digit'}).format(new Date());const persist=()=>localStorage.setItem(storeKey,JSON.stringify(state.sessions.slice(0,30)));
-function suggestions(){if(!state.suggestions.length)return `<div class="welcome"><img src="${byte}" alt="Byte, the Signal Room computer mascot"/><span>BYTE IS READY</span><h3>A quiet second brain for the conversation.</h3><p>Start an allowed session to see useful questions, decision summaries, and next steps here.</p><div class="use-note">For consented meetings, self-study, and mock practice only.</div></div>`;return state.suggestions.map(s=>`<article class="suggestion"><div><span>GEMINI · ${esc(s.time)}</span><button data-copy="${esc(s.text)}">Copy</button></div><p>${esc(s.text)}</p></article>`).join('')}
-function transcripts(){if(!state.transcript.length)return '<p class="transcript-empty">Audio and text excerpts will appear here during your session.</p>';return state.transcript.slice(-12).reverse().map(t=>`<div class="transcript-line"><time>${esc(t.time)}</time><p>${esc(t.text)}</p></div>`).join('')}
-function render(){app.innerHTML=`<div class="app-shell"><aside class="rail"><div class="brand"><i></i>Signal <b>Room</b></div><button class="new-session" data-action="new">+ New session</button><p class="rail-label">WORKSPACE</p><button class="rail-link active">⌁ Live room</button><button class="rail-link" data-action="notes">▱ Session notes</button><button class="rail-link" data-action="settings">⚙ Settings & setup</button><p class="rail-label history-label">RECENT</p><div class="history">${state.sessions.length?state.sessions.slice(0,5).map((s,i)=>`<button class="history-item" data-load="${i}"><b>${esc(s.name)}</b><span>${esc(s.date)}</span></button>`).join(''):'<p class="history-empty">No saved sessions yet.</p>'}</div><div class="rail-footer"><span class="green-dot"></span> Local-first workspace<br/><small>${state.apiKey?'Gemini connected':'Setup required'}</small></div></aside><main class="room"><header class="topbar"><div><span class="crumb">LIVE ROOM / ${state.recording?'LISTENING':'READY'}</span><h1>${esc(state.sessionName)}</h1></div><div class="top-actions"><span class="elapsed">${state.recording?'● LIVE':'○ STANDBY'}</span><button class="ghost" data-action="settings">Settings</button><button class="ghost" data-action="save">Save session</button><button class="end" data-action="end">End</button></div></header><section class="workspace-grid"><div class="conversation"><div class="room-intro"><div class="live-badge"><span></span>${state.recording?'Recording with your permission':'Ready when you are'}</div><h2>Keep the room<br/><em>moving forward.</em></h2><p>Capture authorized meeting audio or paste a question. Gemini uses the context you provide to return a concise, grounded suggestion.</p></div><div class="suggestion-stack">${suggestions()}</div><div class="composer"><textarea id="prompt" placeholder="Ask about this conversation, or paste a meeting excerpt…"></textarea><div><button class="record ${state.recording?'active':''}" data-action="record"><span></span>${state.recording?'Stop recording':'Record audio'}</button><button class="ask" data-action="ask" ${state.processing?'disabled':''}>${state.processing?'Thinking…':'Ask Gemini'} <b>→</b></button></div></div></div><aside class="context-panel"><div class="context-title"><span>SESSION CONTEXT</span><button data-action="settings">Settings</button></div><label>Session name<input id="session-name" value="${esc(state.sessionName)}" placeholder="e.g. Product planning sync" /></label><label>Gemini API key<input id="api-key" type="password" value="${esc(state.apiKey)}" placeholder="Managed in Settings" autocomplete="off" /></label><label>Model<input id="model" value="${esc(state.model)}" /></label><label>Meeting context<textarea id="context" placeholder="Goals, participants, project background, relevant constraints…">${esc(state.context)}</textarea></label><label class="permission"><input id="permission" type="checkbox" /> <span>I confirm every participant knows and permits AI assistance and recording.</span></label><div class="transcript-head"><span>LIVE TRANSCRIPT</span><button data-action="clear">Clear</button></div><div class="transcript">${transcripts()}</div></aside></section></main></div>${setupMarkup()}`;bind()}
-function setupMarkup(){if(!state.setupOpen)return '';const devices=state.devices.length?state.devices.map(d=>`<option value="${esc(d.deviceId)}" ${d.deviceId===state.deviceId?'selected':''}>${esc(d.label||'Microphone')}</option>`).join(''):'<option value="default">Choose a microphone</option>';return `<div class="setup-overlay"><section class="setup-card"><button class="setup-close" data-action="close-settings" ${state.setupComplete?'':'disabled'}>×</button><div class="setup-mascot"><img src="${byte}" alt="Byte the computer mascot"/><span>BYTE’S SETUP CHECKLIST</span><h2>Let’s tune your room.</h2><p>Set up Gemini and audio once, then start a permitted conversation whenever you’re ready.</p><div class="check ${state.apiKey?'done':''}">${state.apiKey?'✓':'1'} Gemini key</div><div class="check ${state.devices.length?'done':''}">${state.devices.length?'✓':'2'} Microphone</div><div class="check ${state.testAudioUrl?'done':''}">${state.testAudioUrl?'✓':'3'} Audio test</div></div><div class="setup-form"><small>SETTINGS & SETUP</small><h3>Connect your tools</h3><label>Gemini API key<input id="setup-api-key" type="password" value="${esc(state.apiKey)}" placeholder="Paste your Google AI Studio key" autocomplete="off" /></label><label class="remember"><input id="remember-key" type="checkbox" ${state.rememberKey?'checked':''}/> Remember with macOS encrypted storage</label><label>Gemini model<select id="setup-model"><option ${state.model==='gemini-2.0-flash'?'selected':''}>gemini-2.0-flash</option><option ${state.model==='gemini-2.5-flash'?'selected':''}>gemini-2.5-flash</option><option ${state.model==='gemini-3.5-flash'?'selected':''}>gemini-3.5-flash</option></select></label><div class="audio-box"><div><b>Audio input</b><span>${state.devices.length?'Select your microphone':'Allow access to detect microphones'}</span></div><button class="tiny" data-action="scan-audio">Scan microphones</button><select id="setup-device">${devices}</select><div class="meter"><i style="width:${state.meter}%"></i></div><div class="audio-actions"><button class="tiny" data-action="test-mic">${state.meter?'Stop level test':'Test level'}</button><button class="tiny" data-action="record-test">${state.testAudioUrl?'Recorded ✓':'Record 3 sec'}</button>${state.testAudioUrl?'<button class="tiny" data-action="play-test">Play test</button>':''}</div></div><p class="setup-note">Byte never records until you click Record audio. Your Gemini key is encrypted locally only when you opt in.</p><button class="setup-save" data-action="save-settings">Save and open Signal Room →</button></div></section></div>`}
-function bind(){document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));document.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>loadSession(Number(b.dataset.load))));document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.dataset.copy).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1300)})));[['api-key','apiKey'],['model','model'],['session-name','sessionName'],['context','context'],['setup-api-key','apiKey'],['setup-model','model'],['setup-device','deviceId']].forEach(([id,key])=>document.querySelector(`#${id}`)?.addEventListener('input',e=>state[key]=e.target.value));document.querySelector('#setup-device')?.addEventListener('change',e=>state.deviceId=e.target.value);document.querySelector('#remember-key')?.addEventListener('change',e=>state.rememberKey=e.target.checked)}
-function permitted(){return document.querySelector('#permission')?.checked}function guard(){if(!permitted()){alert('Confirm that everyone has permitted recording and AI assistance before starting.');return false}if(!state.apiKey.trim()){alert('Enter your Gemini API key first. It is held only in this active app session.');return false}return true}
-function action(type){if(type==='new'){stopRecording();Object.assign(state,{sessionName:'Untitled session',context:'',transcript:[],suggestions:[]});render()}if(type==='record')toggleRecording();if(type==='ask')askText();if(type==='end'){stopRecording();saveSession();alert('Session ended. Your saved record stays on this device.');render()}if(type==='save'){saveSession();alert('Session saved on this device.')}if(type==='clear'){state.transcript=[];render()}if(type==='notes')alert(state.suggestions.length?state.suggestions.map(s=>`• ${s.text}`).join('\n\n'):'No notes yet.');if(type==='settings'){state.setupOpen=true;render()}if(type==='close-settings'){stopMeter();state.setupOpen=false;render()}if(type==='scan-audio')scanAudio();if(type==='test-mic')toggleMeter();if(type==='record-test')recordTest();if(type==='play-test')new Audio(state.testAudioUrl).play();if(type==='save-settings')saveSettings()}
-function saveSession(){const record={name:state.sessionName||'Untitled session',date:new Date().toLocaleDateString(),transcript:state.transcript,suggestions:state.suggestions,context:state.context};state.sessions=[record,...state.sessions.filter(s=>s.name!==record.name)].slice(0,30);persist();render()}function loadSession(index){const s=state.sessions[index];if(!s)return;stopRecording();state.sessionName=s.name;state.context=s.context||'';state.transcript=s.transcript||[];state.suggestions=s.suggestions||[];render()}
-async function askText(){const input=document.querySelector('#prompt');const text=input?.value.trim();if(!text)return alert('Type or paste a question first.');if(!guard())return;state.transcript.push({time:now(),text});input.value='';await requestGemini(text)}
-async function toggleRecording(){if(state.recording)return stopRecording();if(!guard())return;try{const deviceId=state.deviceId&&state.deviceId!=='default'?{exact:state.deviceId}:undefined;state.stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId,echoCancellation:true,noiseSuppression:true}});state.recorder=new MediaRecorder(state.stream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':undefined});state.recorder.ondataavailable=e=>{if(e.data.size>0)processAudio(e.data)};state.recorder.start();state.chunkTimer=setInterval(()=>{if(state.recorder?.state==='recording')state.recorder.requestData()},7000);state.recording=true;render()}catch(e){alert(`Microphone unavailable: ${e.message}`)}}function stopRecording(){clearInterval(state.chunkTimer);if(state.recorder?.state==='recording')state.recorder.stop();state.stream?.getTracks().forEach(t=>t.stop());state.recording=false;state.recorder=null;state.stream=null}
-async function processAudio(blob){if(!state.apiKey||state.processing)return;state.processing=true;render();try{const data=await toBase64(blob);const result=await window.signalRoom.ask({apiKey:state.apiKey,model:state.model,context:state.context,kind:'audio',audio:{data,mimeType:blob.type||'audio/webm'}});if(result.transcript)state.transcript.push({time:now(),text:result.transcript});if(result.answer)state.suggestions.push({time:now(),text:result.answer})}catch(e){state.suggestions.push({time:now(),text:`Gemini error: ${e.message}`})}finally{state.processing=false;render()}}
-async function requestGemini(text){state.processing=true;render();try{const result=await window.signalRoom.ask({apiKey:state.apiKey,model:state.model,context:state.context,kind:'text',text,transcript:state.transcript.slice(-8).map(t=>t.text)});state.suggestions.push({time:now(),text:result.answer||'No response returned.'})}catch(e){state.suggestions.push({time:now(),text:`Gemini error: ${e.message}`})}finally{state.processing=false;render()}}
-async function scanAudio(){try{const probe=await navigator.mediaDevices.getUserMedia({audio:true});probe.getTracks().forEach(t=>t.stop());state.devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');if(state.devices.length&&!state.devices.some(d=>d.deviceId===state.deviceId))state.deviceId=state.devices[0].deviceId;render()}catch(e){alert(`Microphone access is needed to list inputs: ${e.message}`)}}
-async function toggleMeter(){if(state.meterStream)return stopMeter();try{state.meterStream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:state.deviceId&&state.deviceId!=='default'?{exact:state.deviceId}:undefined}});const ctx=new AudioContext();const source=ctx.createMediaStreamSource(state.meterStream);const analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);const values=new Uint8Array(analyser.frequencyBinCount);const tick=()=>{analyser.getByteTimeDomainData(values);let sum=0;for(const v of values)sum+=(v-128)**2;state.meter=Math.min(100,Math.round(Math.sqrt(sum/values.length)*3.5));const bar=document.querySelector('.meter i');if(bar)bar.style.width=`${state.meter}%`;state.meterFrame=requestAnimationFrame(tick)};state.meterCtx=ctx;tick();render()}catch(e){alert(`Audio level test failed: ${e.message}`)}}
-function stopMeter(){cancelAnimationFrame(state.meterFrame);state.meterStream?.getTracks().forEach(t=>t.stop());state.meterCtx?.close();state.meterStream=null;state.meterCtx=null;state.meter=0}
-async function recordTest(){stopMeter();try{const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:state.deviceId&&state.deviceId!=='default'?{exact:state.deviceId}:undefined}});const recorder=new MediaRecorder(stream);const chunks=[];recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());if(state.testAudioUrl)URL.revokeObjectURL(state.testAudioUrl);state.testAudioUrl=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));render()};recorder.start();setTimeout(()=>recorder.stop(),3000)}catch(e){alert(`Test recording failed: ${e.message}`)}}
-async function saveSettings(){try{await window.signalRoom.saveSettings({apiKey:state.apiKey,model:state.model,deviceId:state.deviceId,rememberKey:state.rememberKey});state.setupComplete=true;state.setupOpen=false;stopMeter();render()}catch(e){alert(`Could not save settings: ${e.message}`)}}
-function toBase64(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob)})}
-async function hydrate(){try{const saved=await window.signalRoom.getSettings();Object.assign(state,saved);state.setupComplete=Boolean(saved.apiKey);state.setupOpen=!state.setupComplete}catch{state.setupOpen=true}render()}hydrate();
+import './rerepeet.css';
+import byte from './assets/byte-logo.png';
+
+const app = document.querySelector('#app');
+const sessionsKey = 'rerepeet-sessions-v2';
+
+const providers = {
+  gemini: {
+    name: 'Google Gemini', badge: 'GEMINI', model: 'gemini-2.0-flash', endpoint: '', needsKey: true, audio: true,
+    keyLabel: 'Google AI Studio API key', hint: 'Native audio analysis with your Gemini key.'
+  },
+  groq: {
+    name: 'Groq', badge: 'GROQ', model: 'openai/gpt-oss-20b', endpoint: 'https://api.groq.com/openai/v1', needsKey: true, audio: true,
+    keyLabel: 'Groq API key', hint: 'Fast answers; audio is transcribed before the model responds.'
+  },
+  openrouter: {
+    name: 'OpenRouter Free', badge: 'OR', model: 'openrouter/free', endpoint: 'https://openrouter.ai/api/v1', needsKey: true, audio: false,
+    keyLabel: 'OpenRouter API key', hint: 'Routes to its currently available free-model pool.'
+  },
+  ollama: {
+    name: 'Ollama (local)', badge: 'LOCAL', model: 'qwen3:8b', endpoint: 'http://127.0.0.1:11434/v1', needsKey: false, audio: false,
+    keyLabel: 'No key required', hint: 'Runs a model on this computer through Ollama.'
+  },
+  lmstudio: {
+    name: 'LM Studio (local)', badge: 'LOCAL', model: 'local-model', endpoint: 'http://127.0.0.1:1234/v1', needsKey: false, audio: false,
+    keyLabel: 'No key required', hint: 'Connects to a locally running LM Studio server.'
+  },
+  opencode: {
+    name: 'OpenCode (local)', badge: 'OPENCODE', model: '', endpoint: 'http://127.0.0.1:4096', needsKey: false, audio: false,
+    keyLabel: 'Optional server password', hint: 'Connects to an OpenCode server running on this computer.'
+  },
+  custom: {
+    name: 'Custom OpenAI-compatible', badge: 'CUSTOM', model: '', endpoint: '', needsKey: true, audio: false,
+    keyLabel: 'Provider API key', hint: 'For a compatible chat-completions endpoint you control.'
+  }
+};
+
+const state = {
+  settings: null,
+  screen: 'home',
+  provider: 'gemini',
+  apiKey: '',
+  model: providers.gemini.model,
+  endpoint: providers.gemini.endpoint,
+  rememberKey: false,
+  capture: null,
+  chunks: [],
+  isRecording: false,
+  sessions: JSON.parse(localStorage.getItem(sessionsKey) || '[]'),
+  messages: [],
+  session: null,
+  stream: null
+};
+
+function activeProvider() {
+  return providers[state.provider];
+}
+
+function escapeHTML(value = '') {
+  return String(value).replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+  }[character]));
+}
+
+function formatTime(value) {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+}
+
+function cleanTranscript(value) {
+  return String(value || '').replace(/^Transcript:\s*/i, '').trim();
+}
+
+function providerOptions(selected = state.provider) {
+  return Object.entries(providers).map(([id, provider]) => `<option value="${id}" ${id === selected ? 'selected' : ''}>${provider.name}</option>`).join('');
+}
+
+function render() {
+  if (!state.settings) {
+    app.innerHTML = `<main class="loading-screen"><img src="${byte}" alt="" /><p>Starting Rerepeet…</p></main>`;
+    return;
+  }
+  if (state.screen === 'setup') return renderSetup();
+  if (state.screen === 'session') return renderSession();
+  return renderHome();
+}
+
+function renderBrand(compact = false) {
+  return `<div class="brand ${compact ? 'compact' : ''}"><img src="${byte}" alt="Byte, the Rerepeet computer mascot" /><span>rerepeet</span></div>`;
+}
+
+function renderHome() {
+  const configured = Boolean(state.apiKey || !activeProvider().needsKey);
+  const rows = state.sessions.slice(0, 6).map((session) => `<button class="session-card" data-open-session="${session.id}"><span class="session-kind">${escapeHTML(session.kind || 'conversation')}</span><strong>${escapeHTML(session.title)}</strong><small>${formatTime(session.createdAt)} · ${escapeHTML(session.provider || 'Gemini')}</small></button>`).join('');
+  app.innerHTML = `
+    <div class="app-shell">
+      <aside class="rail">
+        ${renderBrand(true)}
+        <button class="rail-button active" aria-label="Sessions">◫</button>
+        <button class="rail-button" id="openSetupRail" aria-label="Settings">⚙</button>
+        <div class="rail-bottom"><button class="rail-button" id="openSetupBottom" aria-label="Settings">⚙</button></div>
+      </aside>
+      <main class="home-main">
+        <header class="app-header"><div><h1>Sessions</h1><p>Consent-first, local desktop AI assistance.</p></div><div class="header-actions"><span class="provider-status ${configured ? 'ready' : ''}">${configured ? '● Ready' : '● Setup required'}</span><button class="primary" id="createSession">Create session <span>+</span></button></div></header>
+        <section class="hero-card">
+          <div class="hero-copy"><p class="eyebrow">YOUR DESKTOP COPILOT</p><h2>Clear notes and useful answers, on your terms.</h2><p>Rerepeet connects only to the AI provider you choose. Get explicit consent before recording, then keep your session history on this computer.</p><div class="hero-actions"><button class="dark-button" id="startFromHero">Start a session</button><button class="secondary" id="openSetupHero">Configure providers</button></div></div>
+          <div class="byte-stage"><div class="signal-bars" aria-hidden="true">||||||||||||||||||||</div><img src="${byte}" alt="Byte computer mascot" /><p>Byte is ready</p></div>
+        </section>
+        <section class="provider-summary"><div><span class="eyebrow">CONNECTED PROVIDER</span><h3>${escapeHTML(activeProvider().name)}</h3><p>${escapeHTML(activeProvider().hint)}</p></div><button class="secondary" id="changeProvider">Change setup</button></section>
+        <section class="sessions-section"><div class="section-heading"><h2>Recent sessions</h2><button class="text-button" id="clearHistory">Clear local history</button></div>${rows ? `<div class="session-grid">${rows}</div>` : `<div class="empty-state"><img src="${byte}" alt="" /><div><strong>No sessions yet</strong><p>Create a session to start a consent-first conversation.</p></div></div>`}</section>
+      </main>
+    </div>`;
+  bindHome();
+}
+
+function renderSetup() {
+  const provider = activeProvider();
+  const keySection = provider.needsKey || state.provider === 'opencode' ? `<label class="field"><span>${provider.keyLabel}</span><input id="apiKey" type="password" autocomplete="off" placeholder="${provider.needsKey ? 'Paste your key' : 'Only if your OpenCode server requires one'}" value="${escapeHTML(state.apiKey)}" /><small>${provider.needsKey ? 'Sent directly from this desktop app to the provider. Never added to session history.' : 'Leave blank for a local server without authentication.'}</small></label>` : `<div class="local-note"><strong>No API key needed.</strong><span>Rerepeet will connect only to <code>${escapeHTML(state.endpoint)}</code> on this computer.</span></div>`;
+  app.innerHTML = `
+    <main class="setup-page">
+      <header class="setup-topbar">${renderBrand()}<button class="secondary" id="backHome">Back to sessions</button></header>
+      <div class="setup-layout">
+        <aside class="setup-intro"><img src="${byte}" alt="Byte computer mascot" /><p class="eyebrow">SETUP</p><h1>Make Rerepeet yours.</h1><p>Choose a provider, test your audio hardware, and decide whether this device may remember your key.</p><div class="privacy-card"><strong>Built for consent.</strong><span>Rerepeet makes recording status visible and requires your confirmation before capture begins.</span></div></aside>
+        <section class="setup-panel">
+          <div class="panel-heading"><div><p class="eyebrow">CONNECTION</p><h2>AI provider</h2></div><span class="provider-pill">${escapeHTML(provider.badge)}</span></div>
+          <div class="setup-form">
+            <label class="field"><span>Provider</span><select id="providerSelect">${providerOptions()}</select><small>Use a cloud key, a free-tier route, or a model running locally.</small></label>
+            <div class="provider-info"><strong>${escapeHTML(provider.name)}</strong><p>${escapeHTML(provider.hint)}</p><a href="#provider-notes">Read provider setup notes ↓</a></div>
+            <label class="field"><span>${state.provider === 'opencode' ? 'OpenCode server URL' : state.provider === 'gemini' ? 'Model' : 'Model'}</span><input id="model" type="text" value="${escapeHTML(state.model)}" placeholder="${escapeHTML(provider.model || 'Configured by local server')}" /></label>
+            ${state.provider === 'gemini' ? '' : `<label class="field"><span>Endpoint</span><input id="endpoint" type="url" value="${escapeHTML(state.endpoint)}" placeholder="${escapeHTML(provider.endpoint || 'https://your-provider.example/v1')}" /></label>`}
+            ${keySection}
+            <label class="checkbox-field"><input id="rememberKey" type="checkbox" ${state.rememberKey ? 'checked' : ''} ${!provider.needsKey ? 'disabled' : ''} /><span><strong>Remember key on this device</strong><small>Uses this operating system’s secure credential storage when available.</small></span></label>
+          </div>
+          <div class="audio-check"><div><p class="eyebrow">AUDIO SETUP</p><h3>Microphone check</h3><p id="meterLabel">Press test microphone to grant access and see the input level.</p></div><div class="meter"><i id="meterFill"></i></div><button class="secondary" id="testMic">Test microphone</button></div>
+          <div class="setup-actions"><button class="secondary" id="resetSetup">Reset</button><button class="primary" id="saveSetup">Save & continue</button></div>
+          <section id="provider-notes" class="provider-notes"><h3>Provider notes</h3><ul><li><strong>Gemini, Groq, and OpenRouter:</strong> create your own key with the provider; free tiers have quotas and availability limits.</li><li><strong>Ollama and LM Studio:</strong> local inference, no cloud key. Start their local server first.</li><li><strong>OpenCode:</strong> start <code>opencode serve</code>, then Rerepeet talks to its local server.</li><li><strong>Audio:</strong> Gemini supports native audio; Groq uses transcription first. Other connections accept typed prompts today.</li></ul></section>
+        </section>
+      </div>
+    </main>`;
+  bindSetup();
+}
+
+function renderSession() {
+  const session = state.session || { id: crypto.randomUUID(), title: 'New session', createdAt: Date.now(), kind: 'conversation', provider: activeProvider().name };
+  state.session = session;
+  const messages = state.messages.map((message) => `<article class="message ${message.role}"><span>${message.role === 'assistant' ? 'BYTE' : 'YOU'}</span><p>${escapeHTML(message.text)}</p></article>`).join('');
+  const canRecord = activeProvider().audio;
+  app.innerHTML = `
+    <main class="session-page">
+      <header class="session-header">${renderBrand()}<div class="session-header-actions"><span class="provider-pill">${escapeHTML(activeProvider().badge)}</span><button class="secondary" id="endSession">End session</button></div></header>
+      <div class="session-workspace">
+        <section class="capture-pane"><div class="capture-visual"><div class="signal-orb ${state.isRecording ? 'recording' : ''}"><div class="signal-bars">||||||||||||||||||||</div><img src="${byte}" alt="Byte" /></div><h1>${state.isRecording ? 'Listening with consent…' : 'Ready when you are.'}</h1><p>${canRecord ? 'Use the microphone only when everyone involved has agreed to recording.' : `${activeProvider().name} currently accepts typed prompts in Rerepeet.`}</p></div><div class="capture-controls">${canRecord ? `<button class="${state.isRecording ? 'danger' : 'dark-button'}" id="toggleRecording">${state.isRecording ? 'Stop recording' : 'Record with consent'}</button>` : ''}<button class="secondary" id="clearTranscript">Clear</button></div><div class="consent-row"><input type="checkbox" id="consent" ${state.isRecording ? 'checked disabled' : ''}/><label for="consent">Everyone involved has agreed to this recording.</label></div></section>
+        <section class="answer-pane"><div class="answer-heading"><div><p class="eyebrow">BYTE’S NOTES</p><h2>${escapeHTML(session.title)}</h2></div><span>${escapeHTML(activeProvider().name)}</span></div><div class="messages" id="messages">${messages || `<div class="answer-empty"><img src="${byte}" alt="" /><h3>No messages yet</h3><p>Ask Byte a question or record a consented note.</p></div>`}</div><form class="composer" id="composer"><textarea id="prompt" rows="3" placeholder="Type a message for Byte…"></textarea><button class="primary" type="submit">Ask Byte</button></form><p class="session-disclaimer">Rerepeet blocks requests for stealth, deception, unauthorized help, or recording without consent.</p></section>
+      </div>
+    </main>`;
+  bindSession();
+}
+
+function bindHome() {
+  const openSetup = () => { state.screen = 'setup'; render(); };
+  ['openSetupRail', 'openSetupBottom', 'openSetupHero', 'changeProvider'].forEach((id) => document.getElementById(id)?.addEventListener('click', openSetup));
+  ['createSession', 'startFromHero'].forEach((id) => document.getElementById(id)?.addEventListener('click', () => startSession()));
+  document.getElementById('clearHistory')?.addEventListener('click', () => { state.sessions = []; localStorage.setItem(sessionsKey, '[]'); render(); });
+  document.querySelectorAll('[data-open-session]').forEach((button) => button.addEventListener('click', () => {
+    const session = state.sessions.find((item) => item.id === button.dataset.openSession);
+    if (session) { state.session = session; state.messages = session.messages || []; state.screen = 'session'; render(); }
+  }));
+}
+
+function bindSetup() {
+  const readFields = () => {
+    state.apiKey = document.getElementById('apiKey')?.value || '';
+    state.model = document.getElementById('model')?.value || '';
+    state.endpoint = document.getElementById('endpoint')?.value || activeProvider().endpoint;
+    state.rememberKey = Boolean(document.getElementById('rememberKey')?.checked);
+  };
+  document.getElementById('backHome').addEventListener('click', () => { state.screen = 'home'; render(); });
+  document.getElementById('providerSelect').addEventListener('change', (event) => {
+    readFields(); state.provider = event.target.value; const next = activeProvider(); state.model = next.model; state.endpoint = next.endpoint; state.apiKey = ''; state.rememberKey = false; render();
+  });
+  document.getElementById('saveSetup').addEventListener('click', async () => {
+    readFields();
+    const hasRememberedKey = state.settings?.hasStoredKey && state.settings?.provider === state.provider;
+    if (activeProvider().needsKey && !state.apiKey.trim() && !hasRememberedKey) return window.alert(`${activeProvider().keyLabel} is required for this connection.`);
+    if (state.provider !== 'gemini' && !state.endpoint.trim()) return window.alert('Enter an endpoint for this provider.');
+    try {
+      const sessionKey = state.apiKey.trim();
+      const saved = await window.rerepeet.saveSettings({ provider: state.provider, model: state.model.trim(), endpoint: state.endpoint.trim(), apiKey: sessionKey, rememberKey: state.rememberKey });
+      state.settings = saved; state.apiKey = sessionKey; state.screen = 'home'; render();
+    } catch (error) { window.alert(error.message || 'Could not save settings.'); }
+  });
+  document.getElementById('resetSetup').addEventListener('click', async () => {
+    state.provider = 'gemini'; state.model = providers.gemini.model; state.endpoint = ''; state.apiKey = ''; state.rememberKey = false;
+    state.settings = await window.rerepeet.saveSettings({ provider: 'gemini', model: providers.gemini.model, endpoint: '', apiKey: '', rememberKey: false }); render();
+  });
+  document.getElementById('testMic').addEventListener('click', testMicrophone);
+}
+
+function bindSession() {
+  document.getElementById('endSession').addEventListener('click', () => finishSession());
+  document.getElementById('clearTranscript').addEventListener('click', () => { state.messages = []; persistSession(); render(); });
+  document.getElementById('toggleRecording')?.addEventListener('click', toggleRecording);
+  document.getElementById('composer').addEventListener('submit', async (event) => {
+    event.preventDefault(); const prompt = document.getElementById('prompt').value.trim(); if (!prompt) return; document.getElementById('prompt').value = ''; await askByte(prompt);
+  });
+}
+
+function startSession() {
+  const configured = state.settings?.hasStoredKey || !activeProvider().needsKey;
+  if (!configured && !state.apiKey) { state.screen = 'setup'; render(); return; }
+  state.session = { id: crypto.randomUUID(), title: 'New conversation', createdAt: Date.now(), kind: 'conversation', provider: activeProvider().name, messages: [] };
+  state.messages = []; state.screen = 'session'; render();
+}
+
+function persistSession() {
+  if (!state.session) return;
+  state.session.messages = state.messages; state.session.provider = activeProvider().name;
+  const oldIndex = state.sessions.findIndex((item) => item.id === state.session.id);
+  if (oldIndex >= 0) state.sessions[oldIndex] = state.session; else state.sessions.unshift(state.session);
+  state.sessions = state.sessions.slice(0, 40); localStorage.setItem(sessionsKey, JSON.stringify(state.sessions));
+}
+
+function finishSession() {
+  if (state.isRecording) stopRecording(); persistSession(); state.screen = 'home'; render();
+}
+
+async function askByte(prompt, audioBase64 = null, mimeType = null) {
+  const provider = activeProvider();
+  if (audioBase64 && !provider.audio) return window.alert(`${provider.name} is currently configured for typed prompts only.`);
+  state.messages.push({ role: 'user', text: prompt || 'Recorded consented audio' }); persistSession(); render();
+  const messageBox = document.getElementById('messages');
+  if (messageBox) messageBox.insertAdjacentHTML('beforeend', `<article class="message assistant pending"><span>BYTE</span><p>Thinking…</p></article>`);
+  try {
+    const result = await window.rerepeet.ask({
+      provider: state.provider,
+      model: state.model || provider.model,
+      endpoint: state.endpoint || provider.endpoint,
+      apiKey: state.apiKey,
+      kind: audioBase64 ? 'audio' : 'text',
+      text: prompt,
+      audio: audioBase64 ? { data: audioBase64, mimeType } : undefined,
+      transcript: state.messages.filter((message) => message.role === 'user').slice(-6).map((message) => message.text)
+    });
+    if (result.transcript) state.messages[state.messages.length - 1].text = cleanTranscript(result.transcript) || 'Recorded consented audio';
+    state.messages.push({ role: 'assistant', text: result.answer });
+  } catch (error) {
+    state.messages.push({ role: 'assistant', text: `Connection note: ${error.message || 'Unable to reach this provider.'}` });
+  }
+  persistSession(); render();
+}
+
+async function testMicrophone() {
+  const label = document.getElementById('meterLabel'); const fill = document.getElementById('meterFill');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const context = new AudioContext(); const analyser = context.createAnalyser(); const source = context.createMediaStreamSource(stream); const data = new Uint8Array(analyser.frequencyBinCount); source.connect(analyser); label.textContent = 'Microphone connected. Speak normally to see the level.';
+    let frames = 0;
+    const tick = () => { analyser.getByteTimeDomainData(data); const loudness = data.reduce((total, value) => total + Math.abs(value - 128), 0) / data.length; fill.style.width = `${Math.min(100, 8 + loudness * 5)}%`; frames += 1; if (frames < 200) requestAnimationFrame(tick); else { stream.getTracks().forEach((track) => track.stop()); context.close(); label.textContent = 'Microphone check complete.'; } };
+    tick();
+  } catch (error) { label.textContent = 'Microphone access was not granted. Check your operating-system privacy settings and try again.'; }
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer); let binary = '';
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(binary);
+}
+
+async function toggleRecording() {
+  if (state.isRecording) return stopRecording();
+  if (!document.getElementById('consent')?.checked) return window.alert('Confirm that everyone involved agreed before recording.');
+  try {
+    state.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); state.chunks = [];
+    state.capture = new MediaRecorder(state.stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined });
+    state.capture.ondataavailable = (event) => event.data.size && state.chunks.push(event.data);
+    state.capture.onstop = async () => { const blob = new Blob(state.chunks, { type: state.capture.mimeType || 'audio/webm' }); const buffer = await blob.arrayBuffer(); const audioBase64 = arrayBufferToBase64(buffer); state.stream?.getTracks().forEach((track) => track.stop()); state.isRecording = false; await askByte('', audioBase64, blob.type); };
+    state.capture.start(1000); state.isRecording = true; render();
+  } catch (error) { window.alert('Rerepeet could not access the microphone. Check desktop privacy settings and try again.'); }
+}
+
+function stopRecording() { if (state.capture?.state === 'recording') state.capture.stop(); }
+
+async function boot() {
+  try {
+    const saved = await window.rerepeet.getSettings();
+    state.settings = saved; state.provider = providers[saved.provider] ? saved.provider : 'gemini'; state.model = saved.model || providers[state.provider].model; state.endpoint = saved.endpoint || providers[state.provider].endpoint; state.rememberKey = Boolean(saved.rememberKey);
+    if (!saved.hasStoredKey && activeProvider().needsKey) state.screen = 'setup';
+  } catch (error) { state.settings = {}; state.screen = 'setup'; }
+  render();
+}
+
+boot();

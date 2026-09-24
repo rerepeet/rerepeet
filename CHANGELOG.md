@@ -1,0 +1,13 @@
+# Changelog
+
+## 0.2.0 — Rerepeet launch
+
+- Renamed the desktop product to Rerepeet and introduced Byte, the computer mascot.
+- Added Gemini, Groq, OpenRouter Free, Ollama, LM Studio, OpenCode, and custom compatible providers.
+- Added a full provider/audio/key-storage setup screen.
+- Added stable direct downloads for macOS Apple Silicon, macOS Intel, Windows, and Linux.
+- Added GitHub launch documentation, provider guide, security guidance, and checksums in release automation.
+
+## 0.1.1
+
+- Published initial macOS, Windows, and Linux desktop downloads.

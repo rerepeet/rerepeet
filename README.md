@@ -1,60 +1,83 @@
-# Signal Room
+# Rerepeet
 
-Signal Room is a launch-ready Electron desktop app for consented meetings, self-study, and mock practice. It records short microphone chunks, sends them directly from the local desktop app to Gemini with the API key supplied for the active session, and returns a rolling transcript plus concise suggestions.
+![Rerepeet launch banner](assets/brand/rerepeet-banner.png)
 
-It deliberately does **not** include stealth, screen-share evasion, background surveillance, exam assistance, or deceptive interview features.
+> A consent-first, desktop AI workspace with **Byte**, a small computer companion.
 
-## What is included
+[![Build desktop downloads](https://github.com/rerepeet/rerepeet/actions/workflows/release.yml/badge.svg)](https://github.com/rerepeet/rerepeet/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/rerepeet/rerepeet?display_name=tag&color=71ad4e)](https://github.com/rerepeet/rerepeet/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-273b2a)](LICENSE)
 
-- Native desktop launch for macOS, Windows, and Linux via Electron Builder
-- Bring-your-own Gemini API key, held only in the app’s memory
-- Microphone capture in short rolling chunks
-- Gemini audio understanding, transcript capture, and context-aware suggestions
-- Manual text/excerpt workflow when audio is not appropriate
-- Local session history stored in the app browser profile, never including API keys
-- Consent gate before microphone or Gemini use
-- Packaged build, test, and release scripts
+Rerepeet is a real Electron desktop application, not a hosted web page. Choose the model provider that fits your setup, make consent visible before any microphone capture, and keep session history on your device.
 
-## Develop
+## Download Rerepeet
+
+| Platform | Direct download | CPU |
+| --- | --- | --- |
+| macOS Apple Silicon | [Download DMG](https://github.com/rerepeet/rerepeet/releases/latest/download/Rerepeet-mac-arm64.dmg) | M1, M2, M3, M4 and later |
+| macOS Intel | [Download DMG](https://github.com/rerepeet/rerepeet/releases/latest/download/Rerepeet-mac-x64.dmg) | Intel Macs |
+| Windows | [Download installer](https://github.com/rerepeet/rerepeet/releases/latest/download/Rerepeet-win-x64.exe) | 64-bit Windows |
+| Linux | [Download AppImage](https://github.com/rerepeet/rerepeet/releases/latest/download/Rerepeet-linux-x86_64.AppImage) | 64-bit Linux |
+
+Every tagged release publishes a checksum file and separate Apple Silicon and Intel macOS packages. Current and previous packages are on the [Releases page](https://github.com/rerepeet/rerepeet/releases).
+
+## What it does
+
+- Full desktop setup screen for provider, model, endpoint, key storage, microphone permission, and a live input test.
+- Provider switcher for Gemini, Groq, OpenRouter Free, Ollama, LM Studio, OpenCode, and a custom OpenAI-compatible endpoint.
+- Typed prompts for all providers; consent-gated microphone capture for Gemini and Groq.
+- Local session history, clear-session controls, and OS-backed encrypted key storage when “remember key” is enabled.
+- A clear recording indicator and a product boundary against hidden recording, evasion, and deceptive use.
+
+## Choose your provider
+
+| Connection | Key needed | Audio in Rerepeet | Notes |
+| --- | --- | --- | --- |
+| Google Gemini | Your key | Native audio | Free tier may be available, but quotas apply. |
+| Groq | Your key | Whisper transcription then chat | Fast cloud inference; plan limits apply. |
+| OpenRouter Free | Your key | Typed prompts | Uses `openrouter/free`; available free models can change. |
+| Ollama | No | Typed prompts | Local model and local server on your computer. |
+| LM Studio | No | Typed prompts | Local model and local server on your computer. |
+| OpenCode | Optional local server auth | Typed prompts | Connects to `opencode serve` on your computer. |
+| Custom compatible API | Usually | Typed prompts | Any endpoint that implements OpenAI chat completions. |
+
+“Free” never means unlimited. Rerepeet does not create accounts, mint keys, bypass provider quotas, or send your key through a Rerepeet server. See [Provider setup](FEATURE_GUIDE.md) for exact setup details and links.
+
+## First run
+
+1. Install the package for your platform above and open **Rerepeet**.
+2. Pick a provider in **Setup**.
+3. Add your own key, or point Rerepeet at Ollama, LM Studio, or OpenCode running locally.
+4. Use **Test microphone** to grant and check audio access.
+5. Create a session. Before recording, confirm that everyone involved agreed.
+
+## Privacy and consent
+
+- The app talks directly to the provider or local endpoint you select.
+- Rerepeet never uploads session history to a Rerepeet service.
+- Keys stay in memory unless you opt into secure OS key storage.
+- Microphone capture cannot begin until the consent checkbox is confirmed.
+
+Read [Features](FEATURES.md), the step-by-step [Provider guide](FEATURE_GUIDE.md), [Security](SECURITY.md), and the [changelog](CHANGELOG.md).
+
+## Build from source
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-This launches a Vite development server and the Electron app. Allow microphone access only for a conversation where every participant has agreed to recording and AI assistance.
-
-## Desktop downloads
-
-Every version tag, such as `v0.1.0`, starts the GitHub Actions release workflow. It publishes these downloads to the GitHub Release page:
-
-- macOS Apple Silicon `.dmg`
-- macOS Intel `.dmg`
-- Windows x64 `.exe`
-- Linux x64 `.AppImage`
-
-The packaged desktop app is unsigned until macOS code-signing/notarization and Windows code-signing credentials are configured in the repository secrets. The downloads still run locally, but operating systems may show a trust warning until they are signed.
-
-## Package a release locally
+Package a platform download with one of:
 
 ```bash
-npm run build
-npm run dist
+npm run package:mac:arm64
+npm run package:mac:x64
+npm run package:windows
+npm run package:linux
 ```
 
-Platform-specific local builds are `npm run package:mac:arm64`, `npm run package:mac:x64`, `npm run package:windows`, and `npm run package:linux`. Installers are written to `release/` by Electron Builder.
+The release workflow creates all four packages from version tags and makes them available through the stable direct-download URLs above.
 
-## Gemini setup
+## License
 
-Create a restricted Gemini key in Google AI Studio, then paste it into **Session context** in Signal Room. The app calls `models/{model}:generateContent` using the `x-goog-api-key` header. Gemini’s available models, quotas, usage limits, and any charges remain governed by the Google project behind your key; this repository does not create unlimited or free Gemini usage.
-
-## GitHub launch checklist
-
-1. Create a new private or public GitHub repository and push this directory.
-2. Add a repository description, screenshots, and an open-source license appropriate to your launch.
-3. Push a `v*` version tag; GitHub Actions builds all four desktop downloads and attaches them to a GitHub Release.
-4. Keep Gemini keys out of the repository and use application-restricted keys when possible.
-
-## Important implementation note
-
-Audio is sent as browser-recorded WebM/Opus chunks to the Gemini `generateContent` endpoint. If your selected model or key does not accept that media type, use the text mode while configuring a production transcription provider or switch the capture format/model based on the Gemini capabilities for your account.
+MIT. See [LICENSE](LICENSE).
