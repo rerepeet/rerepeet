@@ -1,0 +1,20 @@
+{
+  "name": "signal-room",
+  "version": "0.1.0",
+  "description": "A local-first, consented-conversation copilot powered by a user's Gemini API key.",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1 --port 5175\" \"wait-on http://127.0.0.1:5175 && electron .\"",
+    "build:web": "vite build",
+    "build": "npm run build:web && electron-builder --dir",
+    "dist": "npm run build:web && electron-builder",
+    "package:mac:arm64": "npm run build:web && electron-builder --mac dmg --arm64 --publish never",
+    "package:mac:x64": "npm run build:web && electron-builder --mac dmg --x64 --publish never",
+    "package:windows": "npm run build:web && electron-builder --win nsis --x64 --publish never",
+    "package:linux": "npm run build:web && electron-builder --linux AppImage --x64 --publish never",
+    "test": "node --test test/*.test.cjs"
+  },
+  "build": { "appId": "com.signalroom.app", "productName": "Signal Room", "directories": {"output": "release"}, "artifactName": "${productName}-${version}-${os}-${arch}.${ext}", "files": ["dist/**/*", "electron/**/*", "package.json"], "mac": {"target": ["dmg"]}, "win": {"target": ["nsis"]}, "linux": {"target": ["AppImage"]} },
+  "devDependencies": { "concurrently": "latest", "electron": "latest", "electron-builder": "latest", "vite": "latest", "wait-on": "latest" }
+}
