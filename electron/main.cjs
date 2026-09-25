@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const isDev = !app.isPackaged;
 const DEFAULTS = {
   provider: 'gemini',
-  model: 'gemini-2.0-flash',
+  model: 'gemini-3.5-flash-lite',
   endpoint: '',
   deviceId: 'default',
   rememberKey: true,
@@ -24,8 +24,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1420,
     height: 900,
-    minWidth: 1040,
-    minHeight: 680,
+    minWidth: 720,
+    minHeight: 180,
     backgroundColor: '#f8faf6',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
@@ -51,6 +51,22 @@ app.whenReady().then(() => {
 });
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+ipcMain.handle('window:set-companion', (event, enabled) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return { enabled: false };
+  if (enabled) {
+    win.__rerepeetFullBounds = win.getBounds();
+    win.setMinimumSize(720, 180);
+    win.setSize(760, 208);
+    win.setAlwaysOnTop(true, 'floating');
+    return { enabled: true };
+  }
+  win.setAlwaysOnTop(false);
+  win.setMinimumSize(1040, 680);
+  if (win.__rerepeetFullBounds) win.setBounds(win.__rerepeetFullBounds);
+  return { enabled: false };
 });
 
 const settingsFile = () => path.join(app.getPath('userData'), 'rerepeet-settings.json');
@@ -125,6 +141,8 @@ function buildPrompt(request, transcriptOverride = '') {
   const recent = transcriptOverride || (request.transcript || []).join('\n') || '(none)';
   return [
     instruction(),
+    request.language ? `Reply in ${String(request.language).slice(0, 40)}.` : '',
+    request.autoNotes ? 'When useful, format the response as short, clearly labeled notes. Do not speak or act for the user.' : '',
     '',
     'Session context:',
     request.context || '(none)',
@@ -146,7 +164,12 @@ async function checkedJson(response, label) {
 async function askGemini(request) {
   const apiKey = String(request.apiKey || '');
   if (!apiKey) throw new Error('A Gemini API key is required.');
-  const model = cleanModel(request.model, DEFAULTS.model).replace(/[^a-zA-Z0-9._-]/g, '');
+  const enteredModel = cleanModel(request.model, DEFAULTS.model);
+  const aliases = {
+    '3.5-flash-lite': 'gemini-3.5-flash-lite',
+    'gemini-2.0-flash': 'gemini-3.5-flash-lite',
+  };
+  const model = aliases[enteredModel.toLowerCase().replace(/\s+/g, '-')] || enteredModel.replace(/[^a-zA-Z0-9._-]/g, '');
   const context = buildPrompt(request);
   const parts = request.kind === 'audio'
     ? [{ text: context }, { inline_data: { mime_type: request.audio?.mimeType || 'audio/webm', data: request.audio?.data || '' } }]

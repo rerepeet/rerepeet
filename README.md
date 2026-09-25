@@ -26,7 +26,9 @@ Every tagged release publishes a checksum file and separate Apple Silicon and In
 - Full desktop setup screen for provider, model, endpoint, key storage, microphone permission, and a live input test.
 - Provider switcher for Gemini, Groq, OpenRouter Free, Ollama, LM Studio, OpenCode, and a custom OpenAI-compatible endpoint.
 - Typed prompts for all providers; consent-gated microphone capture for Gemini and Groq.
+- A guided Session Studio for regular conversations, mock practice, or study: context, language, local-history and note-format preferences, then an explicit participant-consent confirmation.
 - Local session history, clear-session controls, and OS-backed encrypted key storage when “remember key” is enabled.
+- A manually opened, clearly visible companion panel for quick workspace controls; it has no hidden mode and never answers on a user’s behalf.
 - A clear recording indicator and a product boundary against hidden recording, evasion, and deceptive use.
 
 ## Choose your provider
@@ -49,7 +51,7 @@ Every tagged release publishes a checksum file and separate Apple Silicon and In
 2. Pick a provider in **Setup**.
 3. Add your own key, or point Rerepeet at Ollama, LM Studio, or OpenCode running locally.
 4. Use **Test microphone** to grant and check audio access.
-5. Create a session. Before recording, confirm that everyone involved agreed.
+5. Create a session in Session Studio, choose preferences, then confirm that everyone involved agreed before recording.
 
 ## Privacy and consent
 

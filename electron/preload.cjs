@@ -3,4 +3,5 @@ contextBridge.exposeInMainWorld('rerepeet',{
   ask:(request)=>ipcRenderer.invoke('ai:ask',request),
   getSettings:()=>ipcRenderer.invoke('settings:read'),
   saveSettings:(settings)=>ipcRenderer.invoke('settings:save',settings),
+  setCompanionMode:(enabled)=>ipcRenderer.invoke('window:set-companion',enabled),
 });

@@ -1,6 +1,6 @@
 {
   "name": "rerepeet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A local-first, consented audio workspace with bring-your-own AI providers.",
   "author": "Rerepeet contributors",
   "main": "electron/main.cjs",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — Session Studio
+
+- Added the guided Session Studio with session modes, context, language, local-history, and note-format preferences.
+- Added an explicit consent confirmation before each new session and recording controls.
+- Added a manually opened, always-visible companion panel with safe workspace controls.
+- Updated the Gemini default to the current `gemini-3.5-flash-lite` model ID and normalize the earlier human-friendly model label.
+
 ## 0.2.0 — Rerepeet launch
 
 - Renamed the desktop product to Rerepeet and introduced Byte, the computer mascot.

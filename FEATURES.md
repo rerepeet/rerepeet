@@ -2,7 +2,9 @@
 
 ## A full desktop tool
 
-Rerepeet ships as a native Electron desktop app for macOS Apple Silicon, macOS Intel, Windows, and Linux. It includes a provider setup flow, microphone permission test, session workspace, local session history, and a release workflow that publishes direct-download packages.
+Rerepeet ships as a native Electron desktop app for macOS Apple Silicon, macOS Intel, Windows, and Linux. It includes a provider setup flow, microphone permission test, Session Studio, visible companion panel, local session history, and a release workflow that publishes direct-download packages.
+
+Session Studio supports regular, mock-practice, and study modes. It collects context, language, note-format, and local-history preferences before the user explicitly confirms that participants agreed to any recording. The companion panel is manually opened, always visible, and contains only manual workspace controls; it has no hidden mode or automatic answering.
 
 ## Provider connections
 

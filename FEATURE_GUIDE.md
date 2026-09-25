@@ -2,7 +2,7 @@
 
 ## Gemini
 
-Create a key in Google AI Studio, select **Google Gemini**, and paste the key into Rerepeet. The default model is `gemini-2.0-flash`. Gemini supports microphone capture in Rerepeet.
+Create a key in Google AI Studio, select **Google Gemini**, and paste the key into Rerepeet. The default model is `gemini-3.5-flash-lite`. Gemini supports microphone capture in Rerepeet.
 
 ## Groq
 

@@ -1,0 +1,2 @@
+/* Keep every manual control available in the compact, clearly visible panel. */
+@media(max-width:850px){.companion-actions .secondary:not(#returnWorkspace){display:inline-flex}}
