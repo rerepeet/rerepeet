@@ -24,7 +24,9 @@ jobs:
 
   mac-intel:
     name: macOS Intel
-    runs-on: macos-13
+    # macOS-14 can package x64 DMGs from Apple Silicon, avoiding the retired
+    # macOS-13 image while still producing a native Intel installer.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,10 +62,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    # The Apple-silicon package is the primary macOS download. Keep the
-    # Intel build independent so a saturated macOS-13 queue cannot delay a
-    # Windows/Linux release.
-    needs: [mac-arm, windows, linux]
+    needs: [mac-arm, mac-intel, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -73,17 +72,4 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: artifacts/*
-
-  attach-intel-mac:
-    # The Intel DMG is intentionally independent of the main release. This
-    # avoids a busy Intel runner delaying Apple-silicon, Windows, and Linux.
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [mac-intel]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with: { name: macOS-x64, path: artifacts }
-      - uses: softprops/action-gh-release@v2
-        with:
           files: artifacts/*

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 — Reliable cross-platform releases
+
+- Moved Intel Mac packaging onto the current macOS runner with x64 cross-packaging.
+- Release automation now waits for and verifies all four downloadable installers before publishing.
+
 ## 0.2.1 — Session Studio
 
 - Added the guided Session Studio with session modes, context, language, local-history, and note-format preferences.
